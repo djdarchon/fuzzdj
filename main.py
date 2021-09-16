@@ -23,13 +23,13 @@ time.sleep(5)
 print("Spawn: Interpreter")
 interpreter = Interpreter(new_analyzer=analyzer)
 
-	# Initialize renderer
-print("Spawn: Renderer")
-renderer = Renderer()
-
 	# Initialize controller
 print("Spawn: Controller")
-controller = Controller(new_renderer=renderer, new_interpreter=interpreter)
+controller = Controller(new_interpreter=interpreter)
+
+	# Initialize renderer
+print("Spawn: Renderer")
+renderer = Renderer(new_controller=controller)
 
 	# Main Loop
 while True:

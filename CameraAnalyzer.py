@@ -31,7 +31,6 @@ class CameraAnalyzer:
 				ret, frame = self.cap.read()
 				image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 				self.SetResults(holistic.process(image))
-				
 				time.sleep(1.0/self.fps)
 
 		self.cap.release()

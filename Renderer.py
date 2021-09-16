@@ -50,7 +50,9 @@ class Renderer:
 		# all available texture sets. each set corresponds to a positional state.
 	images = {}
 
-	def __init__(self):
+	def __init__(self, new_controller):
+		self.controller = new_controller
+
 		if not glfw.init():
 			sys.exit
 		glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 1)
@@ -105,4 +107,5 @@ class Renderer:
 	def Tick(self, delta_time):
 		glfw.poll_events()            
 		glClear(GL_COLOR_BUFFER_BIT)
+		self.controller.Render(delta_time)
 		glfw.swap_buffers(self.window)

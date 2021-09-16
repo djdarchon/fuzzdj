@@ -35,4 +35,4 @@ controller = Controller(new_renderer=renderer, new_interpreter=interpreter)
 while True:
 	controller.Tick(1.0/FPS)
 	renderer.Tick(1.0/FPS)
-	sleep (1.0/FPS)
+	time.sleep (1.0/FPS)

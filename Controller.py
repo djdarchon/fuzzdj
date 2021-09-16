@@ -25,17 +25,11 @@ class Controller:
 		self.current_left = new_left
 		print("CHANGE LEFT: "+str(self.current_left))
 
-	def UnlockLeft(self):
-		pass
-
 	def Tick(self, delta_time):
 		# ask the Interpreter what it thinks is going on
 		# a combination of the interpreter's confidence and our current state
 		# will direct us to our next state (or the same state)
 		left, right = self.interpreter.Poll()
-
-		print(str(left))
-		print(str(right))
 
 		# hysteresis: only change our current interpretation if we've seen this 
 		# new interpretation several times in a row
@@ -61,7 +55,7 @@ class Controller:
 							# this guess has high enough confidence that we should
 							# lock to it. only call this function if we're transitioning
 							# to a new lock (avoid extraneous callbacks)
-							LockLeft(self.last_left)
+							self.LockLeft(self.last_left)
 			else:
 				# losing confidence in our prior guess. we always subtract one
 				# here because if we hit zero the next iteration will replace us

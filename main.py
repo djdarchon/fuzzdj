@@ -9,22 +9,30 @@ import time
 #---
 # CONSTANTS
 WEBCAM_INDEX = 1
+FPS = 60
 
 #---
 # LOGIC
-	# Initialize renderer
-print("Spawn: Renderer")
-renderer = Renderer()
 
 	# Initialize analyzer
 print("Spawn: CameraAnalyzer")
-analyzer = CameraAnalyzer(new_camera_index=WEBCAM_INDEX)
+analyzer = CameraAnalyzer(new_camera_index=WEBCAM_INDEX, new_fps=FPS)
 
 	# Initialize application specific interpreter
 time.sleep(5)
 print("Spawn: Interpreter")
 interpreter = Interpreter(new_analyzer=analyzer)
 
+	# Initialize renderer
+print("Spawn: Renderer")
+renderer = Renderer()
+
 	# Initialize controller
 print("Spawn: Controller")
 controller = Controller(new_renderer=renderer, new_interpreter=interpreter)
+
+	# Main Loop
+while True:
+	controller.Tick(1.0/FPS)
+	renderer.Tick(1.0/FPS)
+	sleep (1.0/FPS)

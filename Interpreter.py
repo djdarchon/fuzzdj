@@ -115,7 +115,7 @@ class Interpreter:
 	
 			front_left = self.TipsAverage(right)
 			front_right = self.TipsAverage(left)
-			# Jaden's glorious hack to align the tables with the camera
+			# align the tables with the camera
 			front_left.y = 1.0
 			front_right.y = 1.0
 			print(str(front_left))
@@ -124,7 +124,7 @@ class Interpreter:
 		print("-= NEXT =-")
 
 			# Construct main area aabb
-		main_area = AABB("MAIN_AREA", front_left, Point(front_right.x, back_right.y))
+		self.main_area = AABB("MAIN_AREA", front_left, Point(front_right.x, back_right.y))
 
 		# Realtime process and interpret.
 		print("INTERPRETATION SERVICE AVAILABLE")
@@ -142,18 +142,18 @@ class Interpreter:
 
 			if hand is not None:
 				hand_aabb = self.TipsAABB(hand)
-				intersection = main_area.QueryAABB(hand_aabb)
+				intersection = self.main_area.QueryAABB(hand_aabb)
 				if intersection is not None:
 					inter_bl = intersection.point_bl
 					inter_tr = intersection.point_tr
 
 						# Normalize
 					# intersection. clamp to main area and average.
-					inter_bl.x = (inter_bl.x - main_area.point_bl.x) / (main_area.point_tr.x - main_area.point_bl.x)
-					inter_bl.y = (inter_bl.y - main_area.point_tr.y) / (main_area.point_bl.y - main_area.point_tr.y)
+					inter_bl.x = (inter_bl.x - self.main_area.point_bl.x) / (self.main_area.point_tr.x - self.main_area.point_bl.x)
+					inter_bl.y = (inter_bl.y - self.main_area.point_tr.y) / (self.main_area.point_bl.y - self.main_area.point_tr.y)
 
-					inter_tr.x = (inter_tr.x - main_area.point_bl.x) / (main_area.point_tr.x - main_area.point_bl.x)
-					inter_tr.y = (inter_tr.y - main_area.point_tr.y) / (main_area.point_bl.y - main_area.point_tr.y)
+					inter_tr.x = (inter_tr.x - self.main_area.point_bl.x) / (self.main_area.point_tr.x - self.main_area.point_bl.x)
+					inter_tr.y = (inter_tr.y - self.main_area.point_tr.y) / (self.main_area.point_bl.y - self.main_area.point_tr.y)
 
 					hand_normal = AABB("NORMALIZED_INTERSECTION", inter_bl, inter_tr)
 			
@@ -175,11 +175,17 @@ class Interpreter:
 					if next_confidence > confidence:
 						confidence = next_confidence
 						result = aabb
-			hands_result += [(confidence, result)]
+
+			if result is None:
+				result_frame = PositionalState.NONE
+			else:
+				result_frame = result.frame
+
+			hands_result += [[confidence, result_frame]]
 				
 			# results ready now interpret
 			# each result is: <confidence, resultant aabb>
 		left_hand = hands_result[0]
 		right_hand = hands_result[1]
 
-		return (left_hand[0], right_hand[0])
+		return left_hand, right_hand

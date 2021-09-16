@@ -7,8 +7,11 @@ class PositionalState(Enum):
 	RIGHT_SCRATCH = auto()
 	RIGHT_EQ = auto()
 	RIGHT_LINE = auto()
+	
 	LEFT_PITCH = auto()
 	LEFT_TUNE = auto()
 	LEFT_SCRATCH = auto()
 	LEFT_EQ = auto()
 	LEFT_LINE = auto()
+
+	NONE = auto()

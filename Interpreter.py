@@ -1,11 +1,11 @@
 from threading import Thread
 import time
 from Geo import Point, AABB
+from PositionalState import PositionalState
 import mediapipe as mp
 
 class Interpreter:
 	CONST_CALIBRATION_DELAY = 5
-	CONST_POLLING_PERIOD = 0.2
 
 	def __init__(self, new_analyzer):
 		self.analyzer = new_analyzer
@@ -14,21 +14,22 @@ class Interpreter:
 		self.mp_hands = mp.solutions.hands
 
 			# set up bounding boxes for detection
-		self.aabbs = [	AABB("RIGHT_PITCH",   Point(0.0, 1.0),     Point(0.22, 0.75)    ),
-						AABB("RIGHT_TUNE",    Point(0.06, 0.64),   Point(0.18, 0.140)   ),
-						AABB("RIGHT_SCRATCH", Point(0.25, 0.544),  Point(0.374, 0.044)  ),
-						AABB("RIGHT_EQ",      Point(0.38, 1.0),    Point(0.462, 0.358)  ),
-						AABB("RIGHT_LINE",    Point(0.400, 0.283), Point(0.483, 0.0)    ),
+		self.aabbs = [	AABB(PositionalState.RIGHT_PITCH,   Point(0.0, 1.0),     Point(0.22, 0.75)    ),
+						AABB(PositionalState.RIGHT_TUNE,    Point(0.06, 0.64),   Point(0.18, 0.140)   ),
+						AABB(PositionalState.RIGHT_SCRATCH, Point(0.25, 0.544),  Point(0.374, 0.044)  ),
+						AABB(PositionalState.RIGHT_EQ,      Point(0.38, 1.0),    Point(0.462, 0.358)  ),
+						AABB(PositionalState.RIGHT_LINE,    Point(0.400, 0.283), Point(0.483, 0.0)    ),
 
-                        AABB("LEFT_PITCH",    Point(0.626, 1.0),   Point(0.847, 0.75)   ),
-						AABB("LEFT_TUNE",     Point(0.868, 0.620), Point(0.926, 0.115)  ),
-						AABB("LEFT_SCRATCH",  Point(0.771, 0.535), Point(0.854, 0.025)  ),
-						AABB("LEFT_EQ",       Point(0.518, 1.0),   Point(0.577, 0.358)  ),
-                        AABB("LEFT_LINE",     Point(0.505, 0.283), Point(0.590, 0.0)    )
+                        AABB(PositionalState.LEFT_PITCH,    Point(0.626, 1.0),   Point(0.847, 0.75)   ),
+						AABB(PositionalState.LEFT_TUNE,     Point(0.868, 0.620), Point(0.926, 0.115)  ),
+						AABB(PositionalState.LEFT_SCRATCH,  Point(0.771, 0.535), Point(0.854, 0.025)  ),
+						AABB(PositionalState.LEFT_EQ,       Point(0.518, 1.0),   Point(0.577, 0.358)  ),
+                        AABB(PositionalState.LEFT_LINE,     Point(0.505, 0.283), Point(0.590, 0.0)    )
 		]
 
-		thread = Thread(target = self.InterpretationLoop)
-		thread.start()
+			# calibrate with user
+		self.Calibrate()
+			# fully set up by this point!
 
 	def TipsAverage(self, hand):
 		x = 0
@@ -61,7 +62,7 @@ class Interpreter:
 					hand.landmark[self.mp_hands.HandLandmark.PINKY_TIP]	]
 		return AABB.FromPoints(tips)
 
-	def InterpretationLoop(self):
+	def Calibrate(self):
 			# Calibrate
 		print("CALIBRATING...")
 
@@ -126,64 +127,59 @@ class Interpreter:
 		main_area = AABB("MAIN_AREA", front_left, Point(front_right.x, back_right.y))
 
 		# Realtime process and interpret.
-		print("INTERPRETATION ACTIVE")
+		print("INTERPRETATION SERVICE AVAILABLE")
 
-		while True:
-			time.sleep(self.CONST_POLLING_PERIOD)
+	def Poll(self):
+			# get hands
+		results = self.analyzer.GetResults()
+		if results is None:
+			return None
 
-				# get hands
-			results = self.analyzer.GetResults()
-			if results is None:
-				continue
+			# it's ok if one hand is missing, just make it none
+		hands = []
+		for hand in [ results.left_hand_landmarks , results.right_hand_landmarks ]:
+			hand_normal = None
 
-				# it's ok if one hand is missing, just make it none
-			hands = []
-			for hand in [ results.left_hand_landmarks , results.right_hand_landmarks ]:
-				hand_normal = None
+			if hand is not None:
+				hand_aabb = self.TipsAABB(hand)
+				intersection = main_area.QueryAABB(hand_aabb)
+				if intersection is not None:
+					inter_bl = intersection.point_bl
+					inter_tr = intersection.point_tr
 
-				if hand is not None:
-					hand_aabb = self.TipsAABB(hand)
-					intersection = main_area.QueryAABB(hand_aabb)
+						# Normalize
+					# intersection. clamp to main area and average.
+					inter_bl.x = (inter_bl.x - main_area.point_bl.x) / (main_area.point_tr.x - main_area.point_bl.x)
+					inter_bl.y = (inter_bl.y - main_area.point_tr.y) / (main_area.point_bl.y - main_area.point_tr.y)
+
+					inter_tr.x = (inter_tr.x - main_area.point_bl.x) / (main_area.point_tr.x - main_area.point_bl.x)
+					inter_tr.y = (inter_tr.y - main_area.point_tr.y) / (main_area.point_bl.y - main_area.point_tr.y)
+
+					hand_normal = AABB("NORMALIZED_INTERSECTION", inter_bl, inter_tr)
+			
+			hands += [ hand_normal ]
+
+			# now see where the fuck the points land
+		hands_result = []
+		for hand in hands:
+			result = None
+			confidence = -999
+			if hand is not None:
+				for aabb in self.aabbs:
+					next_confidence = 0
+					intersection = aabb.QueryAABB(hand)
 					if intersection is not None:
-						inter_bl = intersection.point_bl
-						inter_tr = intersection.point_tr
-
-							# Normalize
-						# intersection. clamp to main area and average.
-						inter_bl.x = (inter_bl.x - main_area.point_bl.x) / (main_area.point_tr.x - main_area.point_bl.x)
-						inter_bl.y = (inter_bl.y - main_area.point_tr.y) / (main_area.point_bl.y - main_area.point_tr.y)
-
-						inter_tr.x = (inter_tr.x - main_area.point_bl.x) / (main_area.point_tr.x - main_area.point_bl.x)
-						inter_tr.y = (inter_tr.y - main_area.point_tr.y) / (main_area.point_bl.y - main_area.point_tr.y)
-
-						hand_normal = AABB("NORMALIZED_INTERSECTION", inter_bl, inter_tr)
+						aabb_area = aabb.Area()
+						intersection_area = intersection.Area()
+						next_confidence = (intersection_area / aabb_area)
+					if next_confidence > confidence:
+						confidence = next_confidence
+						result = aabb
+			hands_result += [(confidence, result)]
 				
-				hands += [ hand_normal ]
+			# results ready now interpret
+			# each result is: <confidence, resultant aabb>
+		left_hand = hands_result[0]
+		right_hand = hands_result[1]
 
-				# now see where the fuck the points land
-			hands_result = []
-			for hand in hands:
-				result = None
-				confidence = -999
-				if hand is not None:
-					for aabb in self.aabbs:
-						next_confidence = 0
-						intersection = aabb.QueryAABB(hand)
-						if intersection is not None:
-							aabb_area = aabb.Area()
-							intersection_area = intersection.Area()
-							next_confidence = (intersection_area / aabb_area)
-						if next_confidence > confidence:
-							confidence = next_confidence
-							result = aabb
-				hands_result += [(confidence, result)]
-					
-				# results ready now interpret
-				# each result is: <confidence, resultant aabb>
-			left_hand = hands_result[0]
-			right_hand = hands_result[1]
-
-			if left_hand[0] > 0.0:
-				print("HIT: "+str(left_hand[1]))
-			if right_hand[0] > 0.0:
-				print("HIT: "+str(right_hand[1]))
+		return (left_hand[0], right_hand[0])

@@ -7,7 +7,7 @@ import cv2
 class CameraAnalyzer:
 	#---
 	# Init
-	#	Begin holistic model. Begin camera video capture. Begin CameraProcessLoop.
+	#	Begin holistic model. Begin camera video capture. Begin Run.
 	def __init__(self, new_camera_index):
 		self.mp_drawing = mp.solutions.drawing_utils
 		self.mp_holistic = mp.solutions.holistic
@@ -15,13 +15,13 @@ class CameraAnalyzer:
 		# Open webcam
 		self.cap = cv2.VideoCapture(new_camera_index)
 
-		thread = Thread(target = self.CameraProcessLoop)
+		thread = Thread(target = self.Run)
 		thread.start()
 	
 	#---
-	# CameraProcessLoop
+	# Run
 	#	Begin a never-ending loop of analysis on the Camera.
-	def CameraProcessLoop(self):
+	def Run(self):
 		# Initiate holistic model
 		with self.mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
 			
